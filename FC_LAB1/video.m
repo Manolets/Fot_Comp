@@ -1,8 +1,8 @@
 clear
 obj=VideoReader('movie.mp4');
 
-X=[540 NaN NaN NaN]'; Y=[370 NaN NaN NaN]';
-NF = get(obj, 'NumberOfFrames');
+X=[540 644 543 648]'; Y=[370 369 474 473]';
+NF = get(obj, 'NumFrames');
 fprintf('Numero de Frames NF=%d\n',NF);
 
 
@@ -15,17 +15,32 @@ set(tt,'FontWeight','Bold','Color',[0 0 1]);
 hold off
 
 pause
+
+R = 20;
+r = (-R:R);
+dx = ones(length(r), 1)*r; dy=dx';
   
 for k=1:NF
 
   % Leer y presentar el siguiente frame  
   frame=read(obj,k); set(im_obj,'Cdata',frame);
-  
-  
+  frame = rgb2gray(frame);
   
  % Bucle actualizando posiciones X(j),Y(j) de las 4 esquinas
   for j=1:4    
-    
+    x = round(X(j));
+    y = round(Y(j));
+    frame = im2double(frame);
+    subimg = frame(y + r, x + r, :);
+    S0 = min(subimg(:));
+    d = abs(subimg - S0);
+    w = exp(-50*d);
+    w = w/sum(w(:));
+    xw = w .* (x + dx);
+    X(j) = sum(xw(:));
+    yw = w .* (y + dy);
+    Y(j) = sum(yw(:));
+
   end
 
  
