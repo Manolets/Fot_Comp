@@ -19,6 +19,10 @@ pause
 R = 20;
 r = (-R:R);
 dx = ones(length(r), 1)*r; dy=dx';
+U = zeros(NF, 4);
+V = zeros(NF, 4);
+U(1, :) = X;
+V(1, :) = Y;
   
 for k=1:NF
 
@@ -43,13 +47,26 @@ for k=1:NF
 
   end
 
- 
+ U(k + 1, :) = X;
+ V(k + 1, :) = Y;
  % Actualizar plot y etiquetas de los puntos sobre la imagen.  
  set(pp_obj,'Xdata',X,'Ydata',Y); 
  for z=1:4, set(tt(z) ,'Position',[X(z)+15 Y(z)+15 0]); end  
  set(t_frame,'String',sprintf('Frame# %03d',k));
+ if k == 400, pause; end
  drawnow
- 
 end
 
+%% 
+
+plot(U);
+plot(V);
+
+D = zeros(NF);
+for i=1:NF, D(i)=sqrt((U(i,1)-U(i, 2))^2 + (V(i, 1)-V(i, 2))^2); end
+plot(D);
+
+dInX = zeros(NF-1);
+for i=1:NF, dInX(i)=U(i, 1)-U(i + 1, 1); end
+plot(dInX);
 
