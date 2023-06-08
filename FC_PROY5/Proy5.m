@@ -29,14 +29,86 @@ imshow(im2);
 %% 1.3
 im = imread('billboard.jpg');
 imshow(im);
-
+%%
 % Obtener las coordenadas de las esquinas del cartel en la imagen "billboard.jpg"
 dest_corners = [581 1195 579 1193; 269 175 553 651];
 
-src_corners = [1 1 size(im,2) size(im,2); 1 size(im,1) 1 size(im,1)]';
+src_corners = [1 size(im,2) 1 size(im,2); 1 1 size(im,1) size(im,1)];
 P = get_proy(dest_corners, src_corners);
 
+im = im2double(im);
 im2 = warp_img(im, inv(P));
+
+imshow(im2);
+pause;
+im3 = im;
+
+for i = 1:size(im, 1)
+    for j = 1:size(im, 2)
+        if ~isnan(im2(i, j))
+            im3(i, j, :) = im2(i, j, :);
+        end
+    end
+end
+
+imshow(im3);
+pause;
+im2 = warp_img(im2, inv(P));
+
+imshow(im2);
+pause;
+
+for i = 1:size(im, 1)
+    for j = 1:size(im, 2)
+        if ~isnan(im2(i, j))
+            im3(i, j, :) = im2(i, j, :);
+        end
+    end
+end
+
+imshow(im3);
+
+%% 2
+xy = [401 643 299 99; 201 296 646 268];
+uv = [269 545 276 26; 350 371 744 412];
+P = get_nolineal(xy, uv);
+dump_mat(P)
+
+%%
+% Obtener la matriz de coeficientes P para la transformación no lineal
+P = get_nolineal(xy, uv);
+
+% Calcular las coordenadas transformadas usando la función convierte()
+uv_transformed = convierte(xy, P);
+
+% Calcular la matriz de diferencias
+diff_matrix = uv - uv_transformed;
+
+% Mostrar la matriz de diferencias
+disp("Matriz de diferencias:")
+disp(diff_matrix);
+
+%%
+% Cargar la imagen y convertirla a escala de grises
+img = imread('foto.jpg');
+img = im2double(img);
+
+% Obtener la matriz de coeficientes de la transformación inversa P_inv
+% P_inv = inv(P);
+% 
+% % Hacer el warping no lineal de la imagen
+% img_warp = warp_img(img, P_inv);
+% imshow(img_warp)
+% Guardar la imagen resultante
+% imwrite(img_warp, 'foto_no_lineal.jpg');
+
+%%
+
+% Hacer el warping no lineal de la imagen
+img_warp = warp_img(img, P);
+imshow(img_warp)
+% Guardar la imagen resultante
+% imwrite(img_warp, 'foto_no_lineal_directa.jpg');
 
 
 %%
@@ -57,17 +129,42 @@ P = reshape(x,[3,3])';
 
 end
 %%
+% function uv = convierte(xy, P)
+% % Agregar una tercera fila de 1's a la matriz xy para formar una matriz de coordenadas homogéneas 3xN
+% xyh = [xy; ones(1, size(xy,2))];
+% 
+% % Multiplicar la matriz P por esta matriz de coordenadas homogéneas
+% uvh = P * xyh;
+% 
+% % Dividir punto a punto las dos primeras filas de la matriz resultante por la tercera fila para obtener las coordenadas de salida uv
+% uv = uvh(1:2,:) ./ uvh(3,:);
+% 
+% end
+
 function uv = convierte(xy, P)
-% Agregar una tercera fila de 1's a la matriz xy para formar una matriz de coordenadas homogéneas 3xN
-xyh = [xy; ones(1, size(xy,2))];
+    if numel(P) == 9 % Transformación lineal
+        % Agregar una tercera fila de 1's a la matriz xy para formar una matriz de coordenadas homogéneas 3xN
+        xyh = [xy; ones(1, size(xy,2))];
 
-% Multiplicar la matriz P por esta matriz de coordenadas homogéneas
-uvh = P * xyh;
+        % Multiplicar la matriz P por esta matriz de coordenadas homogéneas
+        uvh = P * xyh;
 
-% Dividir punto a punto las dos primeras filas de la matriz resultante por la tercera fila para obtener las coordenadas de salida uv
-uv = uvh(1:2,:) ./ uvh(3,:);
+        % Dividir punto a punto las dos primeras filas de la matriz resultante por la tercera fila para obtener las coordenadas de salida uv
+        uv = uvh(1:2,:) ./ uvh(3,:);
+    elseif numel(P) == 8 % Transformación no lineal
+% Construir matriz de coordenadas homogéneas 4xN
+        xyh = [ones(1, size(xy,2)); xy(1,:); xy(2,:); xy(1,:) .* xy(2,:)];
 
+        % Multiplicar la matriz P por esta matriz de coordenadas homogéneas
+        uvh = P * xyh;
+
+        % Obtener las coordenadas de salida uv
+        uv = uvh(1:2,:);
+    else
+        error('La matriz P debe tener 8 o 9 elementos.');
+    end
 end
+
 %%
 function im2 = warp_img(im, iP)
 %Calcula la imagen im2 deformada mediante la transformación iP
@@ -99,6 +196,26 @@ for k = 1:N
         im2(k,:,c) = interp2(X, Y, im(:,:,c), x, y, 'bilinear');
     end
 end
+
+end
+
+%%
+function P = get_nolineal(xy, uv)
+
+% Construir la matriz H
+H = [
+    xy(1,1) xy(2,1) 1 xy(1,1)*xy(2,1);
+    xy(1,2) xy(2,2) 1 xy(1,2)*xy(2,2);
+    xy(1,3) xy(2,3) 1 xy(1,3)*xy(2,3);
+    xy(1,4) xy(2,4) 1 xy(1,4)*xy(2,4);
+];
+
+% Resolver el sistema lineal para obtener los coeficientes de la transformación
+X = H \ uv(1,:)';
+Y = H \ uv(2,:)';
+
+% Construir la matriz P
+P = [X' ; Y'];
 
 end
 
